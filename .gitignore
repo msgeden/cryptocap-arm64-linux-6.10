@@ -58,6 +58,7 @@ modules.order
 #
 # Top-level generic files
 #
+/build/
 /linux
 /modules-only.symvers
 /vmlinux

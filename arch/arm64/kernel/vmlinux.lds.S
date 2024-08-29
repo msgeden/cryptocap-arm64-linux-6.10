@@ -344,6 +344,18 @@ SECTIONS
 
 	.data.rel.ro : { *(.data.rel.ro) }
 	ASSERT(SIZEOF(.data.rel.ro) == 0, "Unexpected RELRO detected!")
+ 
+ 	//#ifdef TARGET_CRYPTO_CAP
+ 	# .ccall_handler_code 0xFFFF8000810BA000 : AT(ADDR(.text) + SIZEOF(.text)) {
+    #     *(.ccall_handler_code)
+    # }
+
+	# /* Place .ccall_handler_data at its current location for the stack */
+    # .ccall_handler_data 0xFFFF800082AAE000 : AT(ADDR(.data) + SIZEOF(.data)) {
+    #     *(.ccall_handler_data)
+    # }
+	//#endif
+
 }
 
 #include "image-vars.h"
