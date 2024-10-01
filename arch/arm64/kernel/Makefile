@@ -79,7 +79,7 @@ $(obj)/vdso32-wrap.o: $(obj)/vdso32/vdso.so
 obj-y					+= probes/
 obj-y					+= head.o
 #TARGET_CRYPTO_CAP
-#obj-y					+= ccall_handler.o 
+obj-y					+= dcalldret_handler.o 
 obj-y					+= ccallcret_handler_c.o 
 obj-y					+= ccallcret_handler_s.o 
 

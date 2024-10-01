@@ -7,7 +7,7 @@ void* ccallcret_handler_sp = NULL;
 // Define the top of the handler's stack (assuming stack grows downwards)
 #define HANDLER_STACK_SIZE 4096
 char ccallcret_stack[HANDLER_STACK_SIZE];
-char* ccallcret_stack_top;
+void* ccallcret_stack_top;
 
 // Declaration of external assembly functions
 //__attribute__((section(".ccall_handler_code")))

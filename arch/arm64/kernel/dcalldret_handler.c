@@ -2,27 +2,27 @@
 #include <linux/printk.h>
 
 // Global variable to store handler's stack pointer
-void* handler_sp = NULL;
+void* dcalldret_handler_sp = NULL;
 
 // Define the top of the handler's stack (assuming stack grows downwards)
-#define HANDLER_STACK_SIZE 4096
-char my_stack[HANDLER_STACK_SIZE];
-char* my_stack_top;
+#define DHANDLER_STACK_SIZE 4096
+char dcalldret_stack[DHANDLER_STACK_SIZE];
+char* dcalldret_stack_top;
 //void* handler_sp;
 
 
 // Initialization function
 static int __init init_handler_stack(void) {
-    my_stack_top = my_stack + HANDLER_STACK_SIZE;
-    handler_sp = my_stack_top;
-    printk(KERN_INFO "Handler stack initialized\n");
+    dcalldret_stack_top = dcalldret_stack + DHANDLER_STACK_SIZE;
+    dcalldret_handler_sp = dcalldret_stack_top;
+    printk(KERN_INFO "DCALLDRET Handler stack initialized\n");
     return 0;
 }
 
 // Cleanup function (if needed)
 static void __exit cleanup_handler_stack(void) {
     // Perform any necessary cleanup here
-    printk(KERN_INFO "Handler stack cleaned up\n");
+    printk(KERN_INFO "DCALLDRET Handler stack cleaned up\n");
 }
 
 // Register the handler to run during late initialization
@@ -177,8 +177,8 @@ void print_gpr_values(void) {
     );
 }
 
-__attribute__((section(".ccall_handler_code")))
-void ccall_handler(uint64_t target_ttbr, uint64_t target_pc) {
+__attribute__((section(".dcall_handler_code")))
+void dcall_handler(uint64_t target_ttbr, uint64_t target_pc) {
 
     // Set x10 to handler_sp (x10 is used as custom sp register not to mess original SP_EL1 of kernel)
     // asm volatile (
@@ -191,7 +191,7 @@ void ccall_handler(uint64_t target_ttbr, uint64_t target_pc) {
     asm volatile (
         "ldr x10, %0\n\t"   // Load handler_sp from memory into register x10
         :
-        : "m"(handler_sp)   // Use memory constraint 'm' for direct memory access
+        : "m"(dcalldret_handler_sp)   // Use memory constraint 'm' for direct memory access
         : "x10", "memory"
     );
 
@@ -242,7 +242,7 @@ void ccall_handler(uint64_t target_ttbr, uint64_t target_pc) {
 
     asm volatile (
         "str x10, %0\n\t"   // Store the value of x10 back into handler_sp in memory
-        : "=m"(handler_sp)  // Directly access the memory location of handler_sp
+        : "=m"(dcalldret_handler_sp)  // Directly access the memory location of handler_sp
         :
         : "memory"
     );
@@ -282,8 +282,8 @@ void ccall_handler(uint64_t target_ttbr, uint64_t target_pc) {
     );
 }
 
-__attribute__((naked, section(".cret_handler_code")))
-void cret_handler(void) {
+__attribute__((section(".dret_handler_code")))
+void dret_handler(void) {
     // Switch to the handler's stack using handler_sp
     // Set x10 to handler_sp (x10 is used as custom sp register not to mess original SP_EL1 of kernel)
     // asm volatile (
@@ -296,7 +296,7 @@ void cret_handler(void) {
     asm volatile (
         "ldr x10, %0\n\t"   // Load handler_sp from memory into register x10
         :
-        : "m"(handler_sp)   // Use memory constraint 'm' for direct memory access
+        : "m"(dcalldret_handler_sp)   // Use memory constraint 'm' for direct memory access
         : "x10", "memory"
     );
 
@@ -347,7 +347,7 @@ void cret_handler(void) {
 
     asm volatile (
         "str x10, %0\n\t"   // Store the value of x10 back into handler_sp in memory
-        : "=m"(handler_sp)  // Directly access the memory location of handler_sp
+        : "=m"(dcalldret_handler_sp)  // Directly access the memory location of handler_sp
         :
         : "memory"
     );

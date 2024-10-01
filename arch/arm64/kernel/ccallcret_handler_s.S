@@ -7,7 +7,7 @@
 .section .ccall_handler_code, "ax"
 .global ccall_handler
 ccall_handler:
-    bl	ccallcret_print_gpr_values
+    //bl	ccallcret_print_gpr_values
     
     //Use x10 as our the SP of our custom stack (handler_sp)
     ldr x9, =ccallcret_handler_sp        
@@ -23,29 +23,44 @@ ccall_handler:
  
     //Push x30-x2 excluding x9, x10, x0, x1
     str	x30, [x10, #-8]!
-    stp	x28, x29, [x10, #-16]!
-    stp	x26, x27, [x10, #-16]!
-    stp	x24, x25, [x10, #-16]!
-    stp	x22, x23, [x10, #-16]!
-    stp	x20, x21, [x10, #-16]!
-    stp	x18, x19, [x10, #-16]!
-    stp	x16, x17, [x10, #-16]!
-    stp	x14, x15, [x10, #-16]!
-    stp	x12, x13, [x10, #-16]!
+    str	x29, [x10, #-8]!
+    str	x28, [x10, #-8]!
+    str	x27, [x10, #-8]!
+    str	x26, [x10, #-8]!
+    str	x25, [x10, #-8]!
+    str	x24, [x10, #-8]!
+    str	x23, [x10, #-8]!
+    str	x22, [x10, #-8]!
+    str	x21, [x10, #-8]!
+    str	x20, [x10, #-8]!
+    str	x19, [x10, #-8]!
+    str	x18, [x10, #-8]!
+    str	x17, [x10, #-8]!
+    str	x16, [x10, #-8]!
+    str	x15, [x10, #-8]!
+    str	x14, [x10, #-8]!
+    str	x13, [x10, #-8]!
+    str	x12, [x10, #-8]!
     str	x11, [x10, #-8]!
+    
     str	x8, [x10, #-8]!
-    stp	x6, x7, [x10, #-16]!
-    stp	x4, x5, [x10, #-16]!
-    stp	x2, x3, [x10, #-16]!
+    str	x7, [x10, #-8]!
+    str	x6, [x10, #-8]!
+    str	x5, [x10, #-8]!
+    str	x4, [x10, #-8]!
+    str	x3, [x10, #-8]!
+    //str	x2, [x10, #-8]!
+    //str	x1, [x10, #-8]!
+    //str	x0, [x10, #-8]!
 
     // Update the top of the stack
     ldr x9, =ccallcret_handler_sp        
     str	x10, [x9]
     
     // Reset condition flags in spsr1_el1
-    mrs	x9, spsr_el1
-    and	x9, x9, #0xfffffff
-    msr	spsr_el1, x9
+    //mrs	x9, spsr_el1
+    //and	x9, x9, #0xfffffff
+    //msr	spsr_el1, x9
 
     // Set elr_el1 using second argument (x1) for the address to be jumped
     msr	elr_el1, x1
@@ -61,21 +76,36 @@ cret_handler:
     //Use x10 as our the SP of our custom stack (handler_sp)
     ldr x9, =ccallcret_handler_sp        
     ldr x10, [x9]         
-    
-    ldp x2, x3, [x10], #16
-    ldp x4, x5, [x10], #16
-    ldp x6, x7, [x10], #16
+
+    //ldr x0, [x10], #8
+    //ldr x1, [x10], #8
+    //ldr x2, [x10], #8
+    ldr x3, [x10], #8
+    ldr x4, [x10], #8
+    ldr x5, [x10], #8
+    ldr x6, [x10], #8
+    ldr x7, [x10], #8
     ldr x8, [x10], #8
+
     ldr x11, [x10], #8
-    ldp x12, x13, [x10], #16
-    ldp x14, x15, [x10], #16
-    ldp x16, x17, [x10], #16
-    ldp x18, x19, [x10], #16
-    ldp x20, x21, [x10], #16
-    ldp x22, x23, [x10], #16
-    ldp x24, x25, [x10], #16
-    ldp x26, x27, [x10], #16
-    ldp x28, x29, [x10], #16
+    ldr x12, [x10], #8
+    ldr x13, [x10], #8
+    ldr x14, [x10], #8
+    ldr x15, [x10], #8
+    ldr x16, [x10], #8
+    ldr x17, [x10], #8
+    ldr x18, [x10], #8
+    ldr x19, [x10], #8
+    ldr x20, [x10], #8
+    ldr x21, [x10], #8
+    ldr x22, [x10], #8
+    ldr x23, [x10], #8
+    ldr x24, [x10], #8
+    ldr x25, [x10], #8
+    ldr x26, [x10], #8
+    ldr x27, [x10], #8
+    ldr x28, [x10], #8
+    ldr x29, [x10], #8
     ldr x30, [x10], #8
 
     // Restore system registers (`SPSR_EL1` `ELR_EL1`, `TTBR0_EL1`) from our custom stack
@@ -83,14 +113,18 @@ cret_handler:
     msr spsr_el1, x9
     ldr x9, [x10], #8
     msr elr_el1, x9
-    ldr x9, [x10], #8
-    
+
+    //this is to locate where the SP should be (since ttbr0_el1 cannot be popped before setting ccallcret_handler_sp)
+    add x10, x10, #8
+        
+    //bl ccallcret_print_gpr_values 
+
     // Update the top of the stack
     ldr x9, =ccallcret_handler_sp        
     str	x10, [x9]
 
-    bl ccallcret_print_gpr_values 
-    
+    //this is necessary to retrieve ttbr0_el1 value
+    ldr x9, [x10, #-8]
     msr ttbr0_el1, x9
     isb
     //cjmp Exit from EL1
