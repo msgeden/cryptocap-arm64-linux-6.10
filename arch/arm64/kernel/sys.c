@@ -36,6 +36,37 @@ SYSCALL_DEFINE1(arm64_personality, unsigned int, personality)
 	return ksys_personality(personality);
 }
 
+// //#ifdef TARGET_CRYPTO_CAP
+// SYSCALL_DEFINE1(ccall, unsigned long, variable)
+// {
+// 	printk(KERN_DEBUG "Debug: CCALL variable %d\n", variable);
+// 	// Ensure the user has the necessary privileges to change the TTBR
+//     if (!capable(CAP_SYS_ADMIN)) {
+//         return -EPERM;  // Return permission error
+//     }
+
+//     // Ensure the new TTBR value is valid
+//     if (!variable) {
+//         return -EINVAL;  // Return invalid argument error
+//     }
+
+//     // Change the TTBR1_EL1 (or TTBR0_EL1 if you want to change user-space)
+//     asm volatile (
+//         "msr ttbr0_el1, %0\n"  // Write the new TTBR value to TTBR0_EL1
+//         "dsb ish\n"            // Data synchronization barrier
+//         "isb\n"                // Instruction synchronization barrier
+//         : : "r" (variable) : "memory"
+//     );
+
+//     // Optionally flush the TLB to apply changes
+//     // asm volatile("tlbi vmalle1is\n");
+// 	// asm volatile("dsb ish\n");
+// 	// asm volatile("isb\n");
+//     // asm volatile("tlbi vmalle1is\; dsb ish\; isb\;");
+//     return 0;  // Success
+// }syscall_table.S
+// //endif 
+
 asmlinkage long sys_ni_syscall(void);
 
 asmlinkage long __arm64_sys_ni_syscall(const struct pt_regs *__unused)

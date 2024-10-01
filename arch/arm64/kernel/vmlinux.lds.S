@@ -346,8 +346,8 @@ SECTIONS
 	ASSERT(SIZEOF(.data.rel.ro) == 0, "Unexpected RELRO detected!")
  
  	//#ifdef TARGET_CRYPTO_CAP
- 	# .ccall_handler_code 0xFFFF8000810BA000 : AT(ADDR(.text) + SIZEOF(.text)) {
-    #     *(.ccall_handler_code)
+ 	# .ccall_handler_code 0xffff800081102000 : AT(ADDR(.text) + SIZEOF(.text)) {
+    #      *(.ccall_handler_code)
     # }
 
 	# /* Place .ccall_handler_data at its current location for the stack */

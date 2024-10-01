@@ -1,3 +1,4 @@
+export KBUILD_CFLAGS = -O0 -g
 # SPDX-License-Identifier: GPL-2.0
 VERSION = 6
 PATCHLEVEL = 10
