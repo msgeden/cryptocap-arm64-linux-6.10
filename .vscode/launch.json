@@ -1,0 +1,89 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Kernel with QEMU (aarch64)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/vmlinux",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            "miDebuggerServerAddress": "localhost:1234",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set architecture for GDB",
+                    "text": "set architecture aarch64",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Connect to QEMU GDB server",
+                    "text": "target remote localhost:1234",
+                    "ignoreFailures": false
+                }
+            ],
+            "preLaunchTask": "Build Kernel (aarch64)",
+            "serverLaunchTimeout": 10000,
+            "filterStderr": true,
+            "filterStdout": false,
+            "logging": {
+                "engineLogging": false
+            },
+            "visualizerFile": "${workspaceFolder}/.vscode/gdb-vs2013.xml",
+            "showDisplayString": true
+        },
+        {
+            "name": "ARM64 Kernel Debugging",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/vmlinux",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerServerAddress": "localhost:1234",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            "logging": {
+                "engineLogging": false
+            },
+            //"miDebuggerPath": "/usr/bin/aarch64-linux-gnu-gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set architecture to ARM64",
+                    "text": "set architecture aarch64",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Disable pagination",
+                    "text": "set pagination off",
+                    "ignoreFailures": true
+                }
+            ],
+            "targetArchitecture": "arm64",
+            "autorun": [
+                "symbol-file ${workspaceFolder}/vmlinux"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,26 @@
+{
+    "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild",
+    "C_Cpp.dimInactiveRegions": false,
+    "files.associations": {
+        "cpregs.h": "c",
+        "*.inc": "c",
+        "*.code": "c",
+        "qemu-main.h": "c",
+        "compare": "c",
+        "cstdint": "c",
+        "*.idef": "c",
+        "*.def": "c",
+        "cpu-defs.h": "c",
+        "array": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "host-utils.h": "c",
+        "streambuf": "cpp",
+        "kernel.h": "c",
+        "printk.h": "c",
+        "init.h": "c"
+    },
+    "qemu.test_file":"test_cross_access",
+    "home": "${env:HOME}",
+    "cmake.sourceDirectory": "/home/munden/cryptocap-arm64/qemu-9/build/meson-private/cmake_SDL2",
+}

@@ -1,0 +1,96 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Kernel (aarch64)",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "ARCH=arm64",
+                "CROSS_COMPILE=aarch64-linux-gnu-",
+                "-j$(nproc)"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Build the Linux kernel for aarch64 architecture."
+        },
+        {
+            "label": "Run QEMU (aarch64)",
+            "type": "shell",
+            "command": "qemu-system-aarch64",
+            "args": [
+                "-M",
+                "virt",
+                "-cpu",
+                "cortex-a53",
+                "-m",
+                "2G",
+                "-nographic",
+                "-kernel",
+                "arch/arm64/boot/Image",
+                "-initrd",
+                "${env:HOME}/cryptocap-arm64/linux-busybox/busybox-1_36_0/initramfs.cpio.gz",
+                "-append",
+                "\"console=ttyAMA0\""
+            ],
+            "group": "test",
+            "problemMatcher": [],
+            "detail": "Run the built kernel using QEMU for aarch64 architecture."
+        },
+        {
+            "label": "Run on my QEMU (aarch64)",
+            "type": "shell",
+            "command": "${env:HOME}/cryptocap-arm64/qemu-9/build/qemu-system-aarch64",
+            "args": [
+                "-M",
+                "virt",
+                "-cpu",
+                "cortex-a53",
+                "-m",
+                "2G",
+                "-nographic",
+                "-kernel",
+                "arch/arm64/boot/Image",
+                "-initrd",
+                "${env:HOME}/cryptocap-arm64/linux-busybox/busybox-1_36_0/initramfs.cpio.gz",
+                "-append",
+                "\"console=ttyAMA0\"",
+                "-nographic"
+            ],
+            "group": "test",
+            "problemMatcher": [],
+            "detail": "Run the built kernel using QEMU for aarch64 architecture."
+        },
+        {
+            "label": "Run QEMU (aarch64 with GDB)",
+            "type": "shell",
+            "command": "qemu-system-aarch64",
+            "args": [
+                "-M",
+                "virt",
+                "-cpu",
+                "cortex-a53",
+                "-m",
+                "2G",
+                "-kernel",
+                "arch/arm64/boot/Image",
+                "-initrd",
+                "${env:HOME}/cryptocap-arm64/linux-busybox/busybox-1_36_0/initramfs.cpio.gz",
+                "-append",
+                "\"console=ttyAMA0\"",
+                "-nographic",
+                "-S",
+                "-gdb",
+                "tcp::1234"
+            ],
+            "group": "test",
+            "problemMatcher": [],
+            "detail": "Run the built kernel using QEMU for aarch64 architecture with GDB support."
+        }
+    ]
+}
