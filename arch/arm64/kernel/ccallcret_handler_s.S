@@ -7,8 +7,6 @@
 .section .ccall_handler_code, "ax"
 .global ccall_handler
 ccall_handler:
-    //bl	ccallcret_print_gpr_values
-    
     //Use x10 as our the SP of our custom stack (handler_sp)
     ldr x9, =ccallcret_handler_sp        
     ldr x10, [x9]        
@@ -19,6 +17,9 @@ ccall_handler:
     mrs	x9, elr_el1
     str	x9, [x10, #-8]!
     mrs	x9, spsr_el1
+    str	x9, [x10, #-8]!
+
+    mrs	x9, sp_el0
     str	x9, [x10, #-8]!
  
     //Push x30-x2 excluding x9, x10, x0, x1
@@ -62,13 +63,19 @@ ccall_handler:
     //and	x9, x9, #0xfffffff
     //msr	spsr_el1, x9
 
+    // Set user SP to the callee's SP
+    msr	sp_el0, x2
     // Set elr_el1 using second argument (x1) for the address to be jumped
     msr	elr_el1, x1
     // Set ttbr0_el1 using first argument (x0) for the address space to be jumped
     msr	ttbr0_el1, x0
-    isb
+    isb 
+    tlbi vmalle1
+    //tlbi vae1is
+    dsb sy
     // Exit from EL1
     .word	0x03500000
+    //eret
 
 .section .cret_handler_code, "ax"
 .global cret_handler  
@@ -108,6 +115,10 @@ cret_handler:
     ldr x29, [x10], #8
     ldr x30, [x10], #8
 
+    // Restore SP
+    ldr x9, [x10], #8
+    msr sp_el0, x9
+
     // Restore system registers (`SPSR_EL1` `ELR_EL1`, `TTBR0_EL1`) from our custom stack
     ldr x9, [x10], #8
     msr spsr_el1, x9
@@ -116,9 +127,7 @@ cret_handler:
 
     //this is to locate where the SP should be (since ttbr0_el1 cannot be popped before setting ccallcret_handler_sp)
     add x10, x10, #8
-        
-    //bl ccallcret_print_gpr_values 
-
+    
     // Update the top of the stack
     ldr x9, =ccallcret_handler_sp        
     str	x10, [x9]
@@ -126,6 +135,10 @@ cret_handler:
     //this is necessary to retrieve ttbr0_el1 value
     ldr x9, [x10, #-8]
     msr ttbr0_el1, x9
-    isb
+    isb 
+    tlbi vmalle1
+    //tlbi vae1is
+    dsb sy
     //cjmp Exit from EL1
     .word 0x3500000
+    //eret

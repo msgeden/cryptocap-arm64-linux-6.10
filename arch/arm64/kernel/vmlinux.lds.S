@@ -186,6 +186,20 @@ SECTIONS
 	. = ALIGN(SEGMENT_ALIGN);
 	_etext = .;			/* End of text section */
 
+	//#ifdef TARGET_CRYPTO_CAP
+ 	/* Align to 4KB boundary before custom sections */
+ 	//. = ALIGN(4K);
+	//. = 0xffff800081552000;  /* Manually setting the address for ccall_handler_code */
+	//.ccall_handler_code : ALIGN(4) {  /* Align to 4-byte boundary for code */
+	//	*(.ccall_handler_code)
+	//}
+	//. = ALIGN(4K);
+	//. = 0xffff800081554000;  /* Manually setting the address for cret_handler_code */
+	//.cret_handler_code : ALIGN(4) {  /* Align to 4-byte boundary for code */
+	//	*(.cret_handler_code)
+	//}  
+	//#endif
+
 	/* everything from this point to __init_begin will be marked RO NX */
 	RO_DATA(PAGE_SIZE)
 
