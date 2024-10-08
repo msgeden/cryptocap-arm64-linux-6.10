@@ -7,17 +7,6 @@
 .section .ccall_handler_code, "ax"
 .global ccall_handler
 ccall_handler:
-
-    //Prepare CLR register for CRET
-    //mrs	x9, ttbr0_el1
-    //.word //clsetpt clr, x9
-    // mrs	x9, elr_el1
-    // .word //clsetpc clr, x9
-    // mrs	x9, sp_el0 
-    // .word //clsetsp clr, x9
-    // mov x9, #0x0 //dummy MAC
-    // .word //clsetmac clr, x9
-  
     //Use x10 as our the SP of our custom stack (handler_sp)
     ldr x9, =ccallcret_handler_sp        
     ldr x10, [x9]        
@@ -74,19 +63,12 @@ ccall_handler:
     //and	x9, x9, #0xfffffff
     //msr	spsr_el1, x9
 
-    //TODO: Sign cap arguments here
-
-    // Set user SP ysing CLC.SP as the callee's SP
-    .word 0x03700049 //clreadsp #0, x9
-    msr	sp_el0, x9
-
-    // Set elr_el1 using CLC.PC for the address to be jumped
-    .word 0x03600049 //clreadpc #0, x9
-    msr	elr_el1, x9
-  
-    // Set ttbr0_el1 using CLC.PT for the address space to be jumped
-    .word 0x03800049 //clreapt #0, x9
-    msr	ttbr0_el1, x9
+    // Set user SP to the callee's SP
+    msr	sp_el0, x2
+    // Set elr_el1 using second argument (x1) for the address to be jumped
+    msr	elr_el1, x1
+    // Set ttbr0_el1 using first argument (x0) for the address space to be jumped
+    msr	ttbr0_el1, x0
     isb 
     tlbi vmalle1
     //tlbi vae1is
