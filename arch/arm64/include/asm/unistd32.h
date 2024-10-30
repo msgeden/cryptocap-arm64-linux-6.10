@@ -931,7 +931,14 @@ __SYSCALL(__NR_lsm_set_self_attr, sys_lsm_set_self_attr)
 __SYSCALL(__NR_lsm_list_modules, sys_lsm_list_modules)
 #define __NR_mseal 462
 __SYSCALL(__NR_mseal, sys_mseal)
-
+//#ifdef TARGET_CRYPTO_CAP
+#define __NR_cdummy 463
+__SYSCALL(__NR_cdummy, sys_cdummy)
+#define __NR_ccall 464
+__SYSCALL(__NR_ccall, sys_ccall)
+#define __NR_cret 465
+__SYSCALL(__NR_cret, sys_cret)
+//#endif
 /*
  * Please add new compat syscalls above this comment and update
  * __NR_compat_syscalls in asm/unistd.h.

@@ -36,36 +36,94 @@ SYSCALL_DEFINE1(arm64_personality, unsigned int, personality)
 	return ksys_personality(personality);
 }
 
-// //#ifdef TARGET_CRYPTO_CAP
-// SYSCALL_DEFINE1(ccall, unsigned long, variable)
-// {
-// 	printk(KERN_DEBUG "Debug: CCALL variable %d\n", variable);
-// 	// Ensure the user has the necessary privileges to change the TTBR
-//     if (!capable(CAP_SYS_ADMIN)) {
-//         return -EPERM;  // Return permission error
-//     }
 
-//     // Ensure the new TTBR value is valid
-//     if (!variable) {
-//         return -EINVAL;  // Return invalid argument error
-//     }
+//#ifdef TARGET_CRYPTO_CAP
+//#463
+SYSCALL_DEFINE0(cdummy)
+{
+	int ret=0;
+	printk(KERN_INFO "cdummy is called!");
+    asm volatile(
+        "mov %0, #54\n\t"       
+		:"=r"(ret)                   
+		:
+		:
+	);
+	return ret;
+}
+//#464
+//#ifdef TARGET_CRYPTO_CAP
+SYSCALL_DEFINE0(ccall)
+{
+	volatile uint64_t ttbr0, elr, spsr, sp_el0_current; 
 
-//     // Change the TTBR1_EL1 (or TTBR0_EL1 if you want to change user-space)
-//     asm volatile (
-//         "msr ttbr0_el1, %0\n"  // Write the new TTBR value to TTBR0_EL1
-//         "dsb ish\n"            // Data synchronization barrier
-//         "isb\n"                // Instruction synchronization barrier
-//         : : "r" (variable) : "memory"
-//     );
+	asm volatile ("mrs %0, ttbr0_el1" : "=r"(current->saved_ttbr0_el1));
+    asm volatile ("mrs %0, elr_el1" : "=r"(current->saved_elr_el1));
+    asm volatile ("mrs %0, spsr_el1" : "=r"(current->saved_spsr_el1));
+    asm volatile ("mrs %0, sp_el0" : "=r"(current->saved_sp_el0));
 
-//     // Optionally flush the TLB to apply changes
-//     // asm volatile("tlbi vmalle1is\n");
-// 	// asm volatile("dsb ish\n");
-// 	// asm volatile("isb\n");
-//     // asm volatile("tlbi vmalle1is\; dsb ish\; isb\;");
-//     return 0;  // Success
-// }syscall_table.S
-// //endif 
+	ttbr0 = current->saved_ttbr0_el1;
+    elr = current->saved_elr_el1;
+    spsr = current->saved_spsr_el1;
+    sp_el0_current=current->saved_sp_el0;
+
+	// Set user SP using CLC.SP as the callee's SP
+    //asm volatile (".word 0x03700049"); //clsp #0, x9
+    //asm volatile ("msr	sp_el0, x9");
+ 
+    // Reset condition flags in spsr1_el1
+    //mrs	x9, spsr_el1
+    //and	x9, x9, #0xfffffff
+    //msr	spsr_el1, x9
+
+    // Set elr_el1 using CLC.PC for the address to be jumped
+    asm volatile (".word 0x03600049"); //clpc #0, x9
+
+    asm volatile ("msr	elr_el1, x9");
+  
+    // Set ttbr0_el1 using CLC.PT for the address space to be jumped
+    asm volatile (".word 0x03800049"); //clpt #0, x9
+    asm volatile ("msr	ttbr0_el1, x9");
+
+    //(Instruction Synchronization Barrier)
+	asm volatile ("isb");
+    //https://developer.arm.com/documentation/ddi0488/c/system-control/aarch64-register-summary/aarch64-tlb-maintenance-operations
+    asm volatile ("tlbi vmalle1");
+    //(Data Synchronization Barrier - Full System)
+    asm volatile ("dsb sy");
+	
+	asm volatile ("eret");
+
+	return 0;
+}
+SYSCALL_DEFINE0(cret)
+{
+	volatile uint64_t ttbr0, elr, spsr, sp_el0_current;
+	
+    // Retrieve system registers from task_struct
+    sp_el0_current = current->saved_sp_el0;
+    spsr = current->saved_spsr_el1;
+    elr = current->saved_elr_el1;
+	ttbr0 = current->saved_ttbr0_el1;
+    
+	// Set the system registers with the retrieved values
+    asm volatile ("msr spsr_el1, %0" : : "r"(spsr));   // Set SPSR
+    asm volatile ("msr elr_el1, %0" : : "r"(elr));     // Set ELR
+    asm volatile ("msr ttbr0_el1, %0" : : "r"(ttbr0)); // Set TTBR0
+    
+    //(Instruction Synchronization Barrier)
+	asm volatile ("isb");
+    //https://developer.arm.com/documentation/ddi0488/c/system-control/aarch64-register-summary/aarch64-tlb-maintenance-operations
+    asm volatile ("tlbi vmalle1");
+    //(Data Synchronization Barrier - Full System)
+    asm volatile ("dsb sy");
+	
+	asm volatile ("eret");
+
+	return 0;
+}
+//#endif	
+
 
 asmlinkage long sys_ni_syscall(void);
 

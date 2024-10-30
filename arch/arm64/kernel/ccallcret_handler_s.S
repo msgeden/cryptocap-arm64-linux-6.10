@@ -101,6 +101,7 @@ ccall_handler:
     //(Instruction Synchronization Barrier)
     isb
     
+    //https://developer.arm.com/documentation/ddi0488/c/system-control/aarch64-register-summary/aarch64-tlb-maintenance-operations
     //(Translation Lookaside Buffer Invalidate - EL1) 
     tlbi vmalle1
     

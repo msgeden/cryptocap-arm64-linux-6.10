@@ -1569,6 +1569,12 @@ struct task_struct {
 	 *
 	 * Do not put anything below here!
 	 */
+//#ifdef TARGET_CRYPTO_CAP
+	unsigned long saved_ttbr0_el1;
+    unsigned long saved_elr_el1;
+    unsigned long saved_spsr_el1;
+    unsigned long saved_sp_el0;
+//#endif
 };
 
 #define TASK_REPORT_IDLE	(TASK_REPORT + 1)

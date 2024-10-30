@@ -845,8 +845,20 @@ __SYSCALL(__NR_lsm_list_modules, sys_lsm_list_modules)
 #define __NR_mseal 462
 __SYSCALL(__NR_mseal, sys_mseal)
 
+//#ifdef TARGET_CRYPTO_CAP
+#define __NR_cdummy 463
+__SYSCALL(__NR_cdummy, sys_cdummy)
+#define __NR_ccall 464
+__SYSCALL(__NR_ccall, sys_ccall)
+#define __NR_cret 462
+__SYSCALL(__NR_cret, sys_cret)
+//#endif
+
 #undef __NR_syscalls
-#define __NR_syscalls 463
+//#ifdef TARGET_CRYPTO_CAP
+//#define __NR_syscalls 463
+#define __NR_syscalls 466
+//#endif
 
 /*
  * 32 bit systems traditionally used different
