@@ -8,9 +8,9 @@
 .global ccall_handler
 ccall_handler:
 
-    //DISABLE INTERRUPTS
-    //mrs x0, daif
-    //msr daifset, #0xf
+    //Disable IRQ and FIQ
+    //mrs x11, daif
+    //msr daifset, #0b11
 
     //Use x10 as our the SP of our custom stack (handler_sp)
     ldr x9, =ccallcret_handler_sp        
@@ -112,9 +112,8 @@ ccall_handler:
     dsb sy
     // Exit from EL1
 
-    //EMABLE INTERRUPTS
-    //msr daif, x0
-
+    //Enable IRQ and FIQ
+    //msr daifclr, #0b11
     .word	0x03500000 //cjmp (i.e. eret)
 
     
@@ -122,9 +121,8 @@ ccall_handler:
 .global cret_handler  
 cret_handler:
  
-    //DISABLE INTERRUPTS
-    //mrs x0, daif
-    //msr daifset, #0xf
+    //Disable IRQ and FIQ
+    //msr daifset, #0b11    
     
     //Use x10 as our the SP of our custom stack (handler_sp)
     ldr x9, =ccallcret_handler_sp        
@@ -211,5 +209,8 @@ cret_handler:
     //EMABLE INTERRUPTS
     //msr daif, x0
 
+    //Enable IRQ and FIQ
+    //msr daif, x11
+    //msr daifclr, #0b11    
     //cjmp Exit from EL1
     .word 0x3500000 //cjmp (i.e. eret)

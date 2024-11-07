@@ -39,17 +39,11 @@ SYSCALL_DEFINE1(arm64_personality, unsigned int, personality)
 
 //#ifdef TARGET_CRYPTO_CAP
 //#463
-SYSCALL_DEFINE0(cdummy)
+SYSCALL_DEFINE1(cdummy,  uint64_t, ret_val)
 {
 	int ret=0;
-	printk(KERN_INFO "cdummy is called!");
-    asm volatile(
-        "mov %0, #54\n\t"       
-		:"=r"(ret)                   
-		:
-		:
-	);
-	return ret;
+	printk(KERN_INFO "cdummy is called with ret_val:%ld",ret_val);
+	return ret_val;
 }
 //#464
 //#ifdef TARGET_CRYPTO_CAP
@@ -107,7 +101,7 @@ SYSCALL_DEFINE0(cret)
 	ttbr0 = current->saved_ttbr0_el1;
     
 	// Set the system registers with the retrieved values
-    asm volatile ("msr spsr_el1, %0" : : "r"(spsr));   // Set SPSR
+    // asm volatile ("msr spsr_el1, %0" : : "r"(spsr));   // Set SPSR
     asm volatile ("msr elr_el1, %0" : : "r"(elr));     // Set ELR
     asm volatile ("msr ttbr0_el1, %0" : : "r"(ttbr0)); // Set TTBR0
     
@@ -121,6 +115,87 @@ SYSCALL_DEFINE0(cret)
 	asm volatile ("eret");
 
 	return 0;
+}
+
+static DEFINE_SPINLOCK(return_value_lock);  // Lock for thread safety
+static DECLARE_COMPLETION(pcall_done);      // Completion variable to signal `pret` completion
+// Track the original caller for switching back in pret
+struct caller_data {
+    struct task_struct *caller_task; // Original caller process
+    pid_t caller_pid;                // PID of the original caller
+    uint64_t ret_val;              // Return value to be returned to the original caller
+};
+static struct caller_data saved_caller;
+SYSCALL_DEFINE2(pcall, pid_t, target_pid, uint64_t, target_pc) {
+    
+    struct task_struct *target_task;
+	struct pt_regs *regs;
+    
+    printk(KERN_INFO "pcall entry: target_pid:%ld, target_pc:%ld\n", target_pid, target_pc);
+
+    // Get the task struct of the target process
+    target_task = find_task_by_vpid(target_pid);
+    if (!target_task){
+        printk(KERN_ERR "pccall error: Target task not found.\n");
+        return -ESRCH;  // Return error if target process does not exist
+    }
+
+    // Save the original caller task and PID for later use
+    spin_lock(&return_value_lock);
+    saved_caller.caller_task = current;
+    saved_caller.caller_pid = task_pid_nr(current);
+    spin_unlock(&return_value_lock);
+
+    // Set the target process's PC to the function address
+    regs = task_pt_regs(target_task);
+    regs->pc = target_pc;
+
+    //set_current_state(TASK_INTERRUPTIBLE);
+    
+    // Wake up the callee task
+    wake_up_process(target_task);
+
+    // Wait until `pret` signals completion
+    wait_for_completion(&pcall_done);
+    //schedule();  // Yield control
+
+    printk(KERN_INFO "pcall termination\n");
+
+    return saved_caller.ret_val;  // Return the value set by `pret`
+}
+
+SYSCALL_DEFINE1(pret, uint64_t, ret_val) {
+
+    struct pt_regs *regs;
+    
+    printk(KERN_INFO "pret entry: caller pid:%d, ret_val:%ld\n", saved_caller.caller_pid, ret_val);
+    
+    // Ensure that pret is being called by the target process, not the caller
+    if (task_pid_nr(current) == saved_caller.caller_pid) {
+        return -EPERM;  // Return error if called by the original caller
+    }
+
+    // Switch back to the original caller
+    spin_lock(&return_value_lock);
+    if (saved_caller.caller_task) {
+        // Set the return value in the original caller's register
+        regs = task_pt_regs(saved_caller.caller_task);
+        regs->regs[0] = ret_val;  // Set x0 to ret_val for the original caller
+        saved_caller.ret_val = ret_val;  // Save the return value
+
+        wake_up_process(saved_caller.caller_task);  // Wake up the original caller
+        saved_caller.caller_task = NULL;
+        saved_caller.caller_pid = 0;
+    }
+    spin_unlock(&return_value_lock);
+
+    // Signal `pcall` that `pret` is complete
+
+    complete(&pcall_done);
+
+    printk(KERN_INFO "pret termination\n");
+    
+    return ret_val;
 }
 //#endif	
 

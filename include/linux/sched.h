@@ -745,6 +745,26 @@ struct kmap_ctrl {
 #endif
 };
 
+//#ifdef TARGET_CRYPTO_CAP
+struct pcall_state {
+    struct task_struct *caller_task;  // Caller process
+    struct pt_regs caller_regs;       // Saved caller registers
+    struct task_struct *callee_task;  // Callee process
+};
+
+// struct pcall_context {
+//     struct pt_regs regs;        // Saved CPU registers
+//     struct task_struct *task;   // Caller task_struct
+//     struct pcall_context *next; // Next context in the stack
+// };
+
+
+// struct pcall_stack {
+//     struct pcall_context *top;  // Top of the call stack
+//     spinlock_t lock;            // Protect access to the stack
+// };
+//#endif
+
 struct task_struct {
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	/*
@@ -1570,6 +1590,8 @@ struct task_struct {
 	 * Do not put anything below here!
 	 */
 //#ifdef TARGET_CRYPTO_CAP
+	//struct pcall_stack pcall_stack;
+	struct pcall_state *pcall_state;  // Pointer to pcall state, used in pcall/pret
 	unsigned long saved_ttbr0_el1;
     unsigned long saved_elr_el1;
     unsigned long saved_spsr_el1;

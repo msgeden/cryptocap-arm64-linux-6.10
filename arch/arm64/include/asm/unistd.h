@@ -40,9 +40,9 @@
 #define __ARM_NR_COMPAT_END		(__ARM_NR_COMPAT_BASE + 0x800)
 
 //#ifdef TARGET_CRYPTO_CAP
-#define __NR_compat_syscalls		466
+#define __NR_compat_syscalls		468
 //#define __NR_compat_syscalls		463
-//#endif //463->466
+//#endif //463->468
 
 #endif
 

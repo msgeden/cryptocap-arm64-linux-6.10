@@ -850,14 +850,18 @@ __SYSCALL(__NR_mseal, sys_mseal)
 __SYSCALL(__NR_cdummy, sys_cdummy)
 #define __NR_ccall 464
 __SYSCALL(__NR_ccall, sys_ccall)
-#define __NR_cret 462
+#define __NR_cret 465
 __SYSCALL(__NR_cret, sys_cret)
+#define __NR_pcall 466
+__SYSCALL(__NR_pcall, sys_pcall)
+#define __NR_pret 467
+__SYSCALL(__NR_pret, sys_pret)
 //#endif
 
 #undef __NR_syscalls
 //#ifdef TARGET_CRYPTO_CAP
 //#define __NR_syscalls 463
-#define __NR_syscalls 466
+#define __NR_syscalls 468
 //#endif
 
 /*

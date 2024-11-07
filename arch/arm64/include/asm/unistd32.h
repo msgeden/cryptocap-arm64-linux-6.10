@@ -938,6 +938,11 @@ __SYSCALL(__NR_cdummy, sys_cdummy)
 __SYSCALL(__NR_ccall, sys_ccall)
 #define __NR_cret 465
 __SYSCALL(__NR_cret, sys_cret)
+
+#define __NR_pcall 466
+__SYSCALL(__NR_pcall, sys_pcall)
+#define __NR_pret 467
+__SYSCALL(__NR_pret, sys_pret)
 //#endif
 /*
  * Please add new compat syscalls above this comment and update
