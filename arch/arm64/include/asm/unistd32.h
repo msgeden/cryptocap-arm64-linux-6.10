@@ -931,6 +931,7 @@ __SYSCALL(__NR_lsm_set_self_attr, sys_lsm_set_self_attr)
 __SYSCALL(__NR_lsm_list_modules, sys_lsm_list_modules)
 #define __NR_mseal 462
 __SYSCALL(__NR_mseal, sys_mseal)
+
 //#ifdef TARGET_CRYPTO_CAP
 #define __NR_cdummy 463
 __SYSCALL(__NR_cdummy, sys_cdummy)
@@ -943,6 +944,16 @@ __SYSCALL(__NR_cret, sys_cret)
 __SYSCALL(__NR_pcall, sys_pcall)
 #define __NR_pret 467
 __SYSCALL(__NR_pret, sys_pret)
+
+#define __NR_dcall 468
+__SYSCALL(__NR_dcall, sys_dcall)
+#define __NR_dret 469
+__SYSCALL(__NR_dret, sys_dret)
+
+#define __NR_acall 470
+__SYSCALL(__NR_acall, sys_acall)
+#define __NR_aret 471
+__SYSCALL(__NR_aret, sys_aret)
 //#endif
 /*
  * Please add new compat syscalls above this comment and update
