@@ -171,87 +171,113 @@ SYSCALL_DEFINE0(cret)
 
 	return 0;
 }
+#define MAX_NESTED_CALLS 16
 
-static DEFINE_SPINLOCK(return_value_lock);  // Lock for thread safety
-static DECLARE_COMPLETION(pcall_done);      // Completion variable to signal `pret` completion
-// Track the original caller for switching back in pret
 struct caller_data {
-    struct task_struct *caller_task; // Original caller process
-    pid_t caller_pid;                // PID of the original caller
-    uint64_t ret_val;              // Return value to be returned to the original caller
+    struct task_struct *caller_task;
+    pid_t caller_pid;
+    uint64_t ret_val;
 };
-static struct caller_data saved_caller;
+
+// Stack of caller data
+static struct caller_data caller_stack[MAX_NESTED_CALLS];
+// Stack of completion variables
+static struct completion pcall_done_stack[MAX_NESTED_CALLS];
+
+// Top of the stack (index of the next free slot)
+static int call_stack_top = 0;
+
+// A lock to protect stack operations
+static DEFINE_SPINLOCK(stack_lock);
+
 SYSCALL_DEFINE2(pcall, pid_t, target_pid, uint64_t, target_pc) {
-    
     struct task_struct *target_task;
-	struct pt_regs *regs;
-    
+    struct pt_regs *regs;
+    int idx;
+
     printk(KERN_INFO "pcall entry: target_pid:%ld, target_pc:0x%lx\n", target_pid, target_pc);
 
-    // Get the task struct of the target process
     target_task = find_task_by_vpid(target_pid);
-    if (!target_task){
-        printk(KERN_ERR "pccall error: Target task not found.\n");
-        return -ESRCH;  // Return error if target process does not exist
+    if (!target_task) {
+        printk(KERN_ERR "pcall error: Target task not found.\n");
+        return -ESRCH;
     }
 
-    // Save the original caller task and PID for later use
-    spin_lock(&return_value_lock);
-    saved_caller.caller_task = current;
-    saved_caller.caller_pid = task_pid_nr(current);
-    spin_unlock(&return_value_lock);
+    spin_lock(&stack_lock);
+    if (call_stack_top >= MAX_NESTED_CALLS) {
+        spin_unlock(&stack_lock);
+        return -ENOMEM;  // No space left for a new nested call
+    }
 
-    // Set the target process's PC to the function address
+    idx = call_stack_top++;
+
+    // Initialize a new completion for this call
+    init_completion(&pcall_done_stack[idx]);
+
+    // Save the caller
+    caller_stack[idx].caller_task = current;
+    caller_stack[idx].caller_pid = task_pid_nr(current);
+    spin_unlock(&stack_lock);
+
+    // Set the target process's PC
     regs = task_pt_regs(target_task);
     regs->pc = target_pc;
 
-    //set_current_state(TASK_INTERRUPTIBLE);
-    
-    // Wake up the callee task
     wake_up_process(target_task);
 
-    // Wait until `pret` signals completion
-    wait_for_completion(&pcall_done);
-    //schedule();  // Yield control
+    // Wait for the corresponding `pret`
+    wait_for_completion(&pcall_done_stack[idx]);
+
+    spin_lock(&stack_lock);
+    // Retrieve return value after pret completes
+    uint64_t ret_val = caller_stack[idx].ret_val;
+    // Pop the stack
+    call_stack_top--;
+    spin_unlock(&stack_lock);
 
     printk(KERN_INFO "pcall termination\n");
 
-    return saved_caller.ret_val;  // Return the value set by `pret`
+    return ret_val;
 }
 
 SYSCALL_DEFINE1(pret, uint64_t, ret_val) {
+    int idx;
 
-    struct pt_regs *regs;
-    
-    printk(KERN_INFO "pret entry: caller pid:%d, ret_val:%ld\n", saved_caller.caller_pid, ret_val);
-    
-    // Ensure that pret is being called by the target process, not the caller
-    if (task_pid_nr(current) == saved_caller.caller_pid) {
-        return -EPERM;  // Return error if called by the original caller
+    printk(KERN_INFO "pret entry: current pid:%d, ret_val:%ld\n", task_pid_nr(current), ret_val);
+
+    spin_lock(&stack_lock);
+    if (call_stack_top == 0) {
+        spin_unlock(&stack_lock);
+        return -EPERM;  // No active pcall to return from
     }
 
-    // Switch back to the original caller
-    spin_lock(&return_value_lock);
-    if (saved_caller.caller_task) {
-        // Set the return value in the original caller's register
-        regs = task_pt_regs(saved_caller.caller_task);
-        regs->regs[0] = ret_val;  // Set x0 to ret_val for the original caller
-        saved_caller.ret_val = ret_val;  // Save the return value
+    // The pret corresponds to the most recent pcall (last on the stack)
+    idx = call_stack_top - 1;
 
-        wake_up_process(saved_caller.caller_task);  // Wake up the original caller
-        saved_caller.caller_task = NULL;
-        saved_caller.caller_pid = 0;
+    // Check if the caller pid matches and that current isn't the caller
+    if (task_pid_nr(current) == caller_stack[idx].caller_pid) {
+        spin_unlock(&stack_lock);
+        return -EPERM;  // The original caller can't call pret
     }
-    spin_unlock(&return_value_lock);
 
-    // Signal `pcall` that `pret` is complete
+    // Set return value
+    caller_stack[idx].ret_val = ret_val;
+    {
+        struct pt_regs *regs = task_pt_regs(caller_stack[idx].caller_task);
+        regs->regs[0] = ret_val;
+    }
 
-    complete(&pcall_done);
+    // Wake up the original caller
+    wake_up_process(caller_stack[idx].caller_task);
+
+    // Signal the pcall completion
+    complete(&pcall_done_stack[idx]);
+    spin_unlock(&stack_lock);
 
     printk(KERN_INFO "pret termination\n");
-    
     return ret_val;
 }
+
 SYSCALL_DEFINE2(dcall, pid_t, target_pid, uint64_t, target_pc) {
    
     struct task_struct *callee;
