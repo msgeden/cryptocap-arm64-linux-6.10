@@ -190,12 +190,36 @@ static int call_stack_top = 0;
 // A lock to protect stack operations
 static DEFINE_SPINLOCK(stack_lock);
 
-SYSCALL_DEFINE2(pcall, pid_t, target_pid, uint64_t, target_pc) {
+SYSCALL_DEFINE3(pcall, pid_t, target_pid, uint64_t, target_pc, uint64_t, target_mac) {
+
     struct task_struct *target_task;
     struct pt_regs *regs;
     int idx;
 
     printk(KERN_INFO "pcall entry: target_pid:%ld, target_pc:0x%lx\n", target_pid, target_pc);
+
+    // There is no need for encryption/decryption of TCR (TID) value as it can be accessed only via EL1 with new design  
+    // Update/Roll TCR value
+    asm volatile(
+            ".word 0x2a00009\n\t"     // readtcr x9
+            "add x9, x9, #1\n\t"      // increment x9
+            ".word 0x2b00009\n\t"     // updtcr x9
+            :
+            :
+            : "x9"
+    );
+
+    // (Re)sign capability registers (CRx)
+    asm volatile(
+            ".word 0x02900000\n\t"     // csign cr0
+            ".word 0x02900001\n\t"     // csign cr1
+            ".word 0x02900002\n\t"     // csign cr2
+            ".word 0x02900003\n\t"     // csign cr3
+            ".word 0x02900004\n\t"     // csign cr4
+            ".word 0x02900005\n\t"     // csign cr5
+            ".word 0x02900006\n\t"     // csign cr6
+            ".word 0x02900007\n\t"     // csign cr7
+    );
 
     target_task = find_task_by_vpid(target_pid);
     if (!target_task) {
@@ -244,6 +268,16 @@ SYSCALL_DEFINE1(pret, uint64_t, ret_val) {
     int idx;
 
     printk(KERN_INFO "pret entry: current pid:%d, ret_val:%ld\n", task_pid_nr(current), ret_val);
+  
+    // Update/Unroll TCR value
+    asm volatile(
+            ".word 0x2a00009\n\t"     // readtcr x9
+            "sub x9, x9, #1\n\t"      // decrement x9
+            ".word 0x2b00009\n\t"     // updtcr x9
+            :
+            :
+            : "x9"
+    );
 
     spin_lock(&stack_lock);
     if (call_stack_top == 0) {
