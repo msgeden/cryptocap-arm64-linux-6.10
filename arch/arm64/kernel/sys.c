@@ -184,11 +184,36 @@ static struct caller_data caller_stack[MAX_NESTED_CALLS];
 // Stack of completion variables
 static struct completion pcall_done_stack[MAX_NESTED_CALLS];
 
+// Stack of pcall identifiers
+static int call_IDs[MAX_NESTED_CALLS];
+
+// pcall counter
+static int call_counter = 0;
+
 // Top of the stack (index of the next free slot)
 static int call_stack_top = 0;
 
 // A lock to protect stack operations
 static DEFINE_SPINLOCK(stack_lock);
+
+SYSCALL_DEFINE2(pgrant, pid_t, target_pid, uint64_t, func_addr) {
+
+	printk(KERN_INFO "pgrant is called with func_addr:%ld and target_pid:%ld",func_addr,target_pid);
+    uint64_t host_pid=current->pid;
+    asm volatile (
+        "mov x9, %0\n\t"    // Move target_pid into x9
+        "mov x10, %1\n\t"   // Move host_pid into x10
+        "mov x11, %2\n\t"   // Move func_addr into x11
+        ".word 0x3600009\n\t" //cmovcl clp.TARGET, x9
+        ".word 0x360010a\n\t" //cmovcl clp.HOST, x10
+        ".word 0x360020b\n\t" //cmovcl clp.PC, x11
+        ".word 0x3700000\n\t" //csigncl 
+        :                   // No output operands
+        : "r" (target_pid), "r" (host_pid), "r" (func_addr)  // Input operands
+        : "x9", "x10", "x11"  // Clobbered registers
+    );
+	return 0;
+}
 
 SYSCALL_DEFINE3(pcall, pid_t, target_pid, uint64_t, target_pc, uint64_t, target_mac) {
 
@@ -197,29 +222,6 @@ SYSCALL_DEFINE3(pcall, pid_t, target_pid, uint64_t, target_pc, uint64_t, target_
     int idx;
 
     printk(KERN_INFO "pcall entry: target_pid:%ld, target_pc:0x%lx\n", target_pid, target_pc);
-
-    // There is no need for encryption/decryption of TCR (TID) value as it can be accessed only via EL1 with new design  
-    // Update/Roll TCR value
-    asm volatile(
-            ".word 0x2a00009\n\t"     // readtcr x9
-            "add x9, x9, #1\n\t"      // increment x9
-            ".word 0x2b00009\n\t"     // updtcr x9
-            :
-            :
-            : "x9"
-    );
-
-    // (Re)sign capability registers (CRx)
-    asm volatile(
-            ".word 0x02900000\n\t"     // csign cr0
-            ".word 0x02900001\n\t"     // csign cr1
-            ".word 0x02900002\n\t"     // csign cr2
-            ".word 0x02900003\n\t"     // csign cr3
-            ".word 0x02900004\n\t"     // csign cr4
-            ".word 0x02900005\n\t"     // csign cr5
-            ".word 0x02900006\n\t"     // csign cr6
-            ".word 0x02900007\n\t"     // csign cr7
-    );
 
     target_task = find_task_by_vpid(target_pid);
     if (!target_task) {
@@ -241,7 +243,41 @@ SYSCALL_DEFINE3(pcall, pid_t, target_pid, uint64_t, target_pc, uint64_t, target_
     // Save the caller
     caller_stack[idx].caller_task = current;
     caller_stack[idx].caller_pid = task_pid_nr(current);
+    call_IDs[idx]=++call_counter;
     spin_unlock(&stack_lock);
+
+
+    // There is no need for encryption/decryption of TCR (TID) value as it can be accessed only via EL1 with new design  
+    // Update/Roll TCR value
+    asm volatile(
+            "mov x9, %0 \n\t"
+            ".word 0x2b00009\n\t"     // updtcr x9
+            :
+            : "r"(call_counter)
+            : "x9"
+    );
+    // asm volatile(
+    //         ".word 0x2a00009\n\t"     // readtcr x9
+    //         "add x9, x9, #1\n\t"      // decrement x9
+    //         ".word 0x2b00009\n\t"     // updtcr x9
+    //         :
+    //         :
+    //         : "x9"
+    // );
+
+
+    // (Re)sign capability registers (CRx)
+    asm volatile(
+            ".word 0x02900000\n\t"     // csign cr0
+            ".word 0x02900001\n\t"     // csign cr1
+            ".word 0x02900002\n\t"     // csign cr2
+            ".word 0x02900003\n\t"     // csign cr3
+            ".word 0x02900004\n\t"     // csign cr4
+            ".word 0x02900005\n\t"     // csign cr5
+            ".word 0x02900006\n\t"     // csign cr6
+            ".word 0x02900007\n\t"     // csign cr7
+    );
+
 
     // Set the target process's PC
     regs = task_pt_regs(target_task);
@@ -266,19 +302,9 @@ SYSCALL_DEFINE3(pcall, pid_t, target_pid, uint64_t, target_pc, uint64_t, target_
 
 SYSCALL_DEFINE1(pret, uint64_t, ret_val) {
     int idx;
-
+    int pushed_counter;
     printk(KERN_INFO "pret entry: current pid:%d, ret_val:%ld\n", task_pid_nr(current), ret_val);
   
-    // Update/Unroll TCR value
-    asm volatile(
-            ".word 0x2a00009\n\t"     // readtcr x9
-            "sub x9, x9, #1\n\t"      // decrement x9
-            ".word 0x2b00009\n\t"     // updtcr x9
-            :
-            :
-            : "x9"
-    );
-
     spin_lock(&stack_lock);
     if (call_stack_top == 0) {
         spin_unlock(&stack_lock);
@@ -294,12 +320,30 @@ SYSCALL_DEFINE1(pret, uint64_t, ret_val) {
         return -EPERM;  // The original caller can't call pret
     }
 
+    // Update/Unroll TCR value
+    pushed_counter=call_IDs[idx];
+    asm volatile(
+            "mov x9, %0 \n\t"
+            ".word 0x2b00009\n\t"     // updtcr x9
+            :
+            : "r"(pushed_counter)
+            : "x9"
+    );
+    // asm volatile(
+    //         ".word 0x2a00009\n\t"     // readtcr x9
+    //         "sub x9, x9, #1\n\t"      // decrement x9
+    //         ".word 0x2b00009\n\t"     // updtcr x9
+    //         :
+    //         :
+    //         : "x9"
+    // );
+
     // Set return value
     caller_stack[idx].ret_val = ret_val;
-    {
-        struct pt_regs *regs = task_pt_regs(caller_stack[idx].caller_task);
-        regs->regs[0] = ret_val;
-    }
+    struct pt_regs *regs = task_pt_regs(caller_stack[idx].caller_task);
+    regs->regs[0] = ret_val;
+
+
 
     // Wake up the original caller
     wake_up_process(caller_stack[idx].caller_task);

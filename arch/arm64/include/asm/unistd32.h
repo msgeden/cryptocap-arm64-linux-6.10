@@ -945,14 +945,17 @@ __SYSCALL(__NR_pcall, sys_pcall)
 #define __NR_pret 467
 __SYSCALL(__NR_pret, sys_pret)
 
-#define __NR_dcall 468
+#define __NR_pgrant 468
+__SYSCALL(__NR_pgrant, sys_pgrant)
+
+#define __NR_dcall 469
 __SYSCALL(__NR_dcall, sys_dcall)
-#define __NR_dret 469
+#define __NR_dret 470
 __SYSCALL(__NR_dret, sys_dret)
 
-#define __NR_acall 470
-__SYSCALL(__NR_acall, sys_acall)
-#define __NR_aret 471
+#define __NR_acall 471
+__SYSCALL(__NR_acall,sys_acall)
+#define __NR_aret 472
 __SYSCALL(__NR_aret, sys_aret)
 //#endif
 /*
